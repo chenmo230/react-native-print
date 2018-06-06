@@ -1,6 +1,8 @@
 package com.christopherdro.RNPrint;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
@@ -9,6 +11,7 @@ import android.print.PrintAttributes;
 import android.print.PrintDocumentAdapter;
 import android.print.PrintDocumentInfo;
 import android.print.PrintManager;
+import android.support.v4.print.PrintHelper;
 import android.webkit.URLUtil;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -19,13 +22,13 @@ import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.UiThreadUtil;
-
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
 
 
@@ -36,6 +39,7 @@ public class RNPrintModule extends ReactContextBaseJavaModule {
 
     ReactApplicationContext reactContext;
     final String jobName = "Document";
+    PrintHelper printHelper;
 
 
     public RNPrintModule(ReactApplicationContext reactContext) {
@@ -202,6 +206,55 @@ public class RNPrintModule extends ReactContextBaseJavaModule {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @ReactMethod
+    public void printRemoteImage(String url){
+        if (url == null)
+            return;
+        HttpURLConnection conn = null;
+        try {
+            URL mURL = new URL(url);
+            conn = (HttpURLConnection) mURL.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(5000);
+
+            conn.connect();
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 200) {
+                InputStream is = conn.getInputStream();
+                Bitmap bitmap = BitmapFactory.decodeStream(is);
+                getPrintHelper().printBitmap("printRemoteImageJob",bitmap);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
+    @ReactMethod
+    public void printLocalImage(String path){
+        if (path == null)
+            return;
+        try {
+            getPrintHelper().printBitmap("prinLocalImageJob",BitmapFactory.decodeFile(path));
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    private PrintHelper getPrintHelper(){
+        if (printHelper == null){
+            printHelper = new PrintHelper(getCurrentActivity());
+            printHelper.setScaleMode(PrintHelper.SCALE_MODE_FIT);
+            return printHelper;
+        }
+        return printHelper;
     }
 
 }
