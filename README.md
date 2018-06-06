@@ -168,4 +168,4 @@ const styles = StyleSheet.create({
 
 
 ## selectPrinter()
-**iOS Only:** Prompt UI for user to select printer for silent printing 
+**iOS Only:** Prompt UI for user to select printer for silent printing
